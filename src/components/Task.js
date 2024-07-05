@@ -7,9 +7,9 @@ const Task = ({ task, onToggleStatus, onDelete }) => {
       <Text style={styles.taskTitle}>{task.title}</Text>
       <Switch
         value={task.status === 'done'}
-        onValueChange={() => onToggleStatus(task.id)}
+        onValueChange={onToggleStatus}
       />
-      <Button title="Delete" onPress={() => onDelete(task.id)} />
+      <Button title="Delete" onPress={onDelete} />
     </View>
   );
 };

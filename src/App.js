@@ -1,26 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
 import Task from './components/Task';
+import { tasksCollection } from './firebaseConfig';
 
 const App = () => {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
 
-  const addTask = () => {
+  useEffect(() => {
+    const unsubscribe = tasksCollection.onSnapshot(querySnapshot => {
+      const tasksArray = [];
+      querySnapshot.forEach(documentSnapshot => {
+        tasksArray.push({
+          ...documentSnapshot.data(),
+          id: documentSnapshot.id,
+        });
+      });
+      setTasks(tasksArray);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const addTask = async () => {
     if (title.trim() === '') {
       Alert.alert('Validation Error', 'Task title cannot be empty.');
       return;
     }
-    setTasks([...tasks, { id: Date.now().toString(), title, status: 'due' }]);
+    await tasksCollection.add({
+      title,
+      status: 'due',
+    });
     setTitle('');
   };
 
-  const toggleStatus = (id) => {
-    setTasks(tasks.map(task => task.id === id ? { ...task, status: task.status === 'due' ? 'done' : 'due' } : task));
+  const toggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'due' ? 'done' : 'due';
+    await tasksCollection.doc(id).update({
+      status: newStatus,
+    });
   };
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const deleteTask = async (id) => {
+    await tasksCollection.doc(id).delete();
   };
 
   return (
@@ -40,7 +62,11 @@ const App = () => {
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Task task={item} onToggleStatus={toggleStatus} onDelete={deleteTask} />
+          <Task
+            task={item}
+            onToggleStatus={() => toggleStatus(item.id, item.status)}
+            onDelete={() => deleteTask(item.id)}
+          />
         )}
       />
     </View>
